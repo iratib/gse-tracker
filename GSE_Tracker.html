@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GSE Tracker — Suivi Matériel Ramp</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0e18;--surface:#111622;--surface2:#171d2e;--surface3:#1d2540;
+  --border:#222d47;--border2:#2a3857;
+  --blue:#4d8ef0;--blue-dim:#132044;
+  --green:#27c97e;--green-dim:#0a2e1c;
+  --red:#e8553a;--red-dim:#2e1009;
+  --amber:#f0a020;--amber-dim:#2e1f05;
+  --purple:#9b72f0;--purple-dim:#1e1040;
+  --text:#dde3f5;--text2:#7a88aa;--text3:#3d4d6a;
+  --radius:12px;--radius-sm:7px;
+}
+html,body{height:100%;font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:12px;}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:34px;height:34px;border-radius:var(--radius-sm);background:linear-gradient(135deg,#1a3a7a,#2a5fc0);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(77,142,240,0.3);}
+.logo-name{font-size:15px;font-weight:600;letter-spacing:-0.02em}
+.logo-sub{font-size:11px;color:var(--text3)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.status-pill{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 13px;font-size:12px;color:var(--text2)}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .3s}
+.status-dot.ok{background:var(--green);box-shadow:0 0 6px rgba(39,201,126,0.5);animation:blink 2.5s infinite}
+.status-dot.err{background:var(--red)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.sync-time{font-size:11px;color:var(--text3)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s;}
+.btn:hover{background:var(--surface3);color:var(--text);border-color:var(--blue)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn.primary{background:var(--blue-dim);border-color:var(--blue);color:var(--blue)}
+.btn.primary:hover{background:var(--blue);color:#fff}
+.nav{display:flex;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;gap:2px;}
+.nav-tab{padding:12px 18px;font-size:13px;color:var(--text2);background:transparent;border:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;font-family:inherit;white-space:nowrap;display:flex;align-items:center;gap:6px;}
+.nav-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.nav-tab:hover:not(.active){color:var(--text)}
+.main{flex:1;overflow-y:auto;padding:24px}
+.section{display:none}.section.active{display:block}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent,var(--blue));opacity:.6;}
+.kpi-label{font-size:10px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+.kpi-val{font-size:28px;font-weight:600;letter-spacing:-0.03em}
+.kpi-sub{font-size:11px;margin-top:5px;color:var(--text3)}
+.toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.filter-group{display:flex;gap:4px;align-items:center}
+.filter-label{font-size:11px;color:var(--text3);margin-right:4px;letter-spacing:.03em;text-transform:uppercase}
+.fbtn{padding:4px 11px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s;font-family:inherit;}
+.fbtn:hover{border-color:var(--blue);color:var(--text)}
+.fbtn.active{background:var(--blue-dim);border-color:var(--blue);color:var(--blue)}
+.search-box{margin-left:auto;position:relative;}
+.search-box input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px 6px 30px;font-size:12px;color:var(--text);font-family:inherit;width:180px;outline:none;transition:border-color .15s;}
+.search-box input:focus{border-color:var(--blue)}
+.search-box input::placeholder{color:var(--text3)}
+.search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none}
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:var(--surface2)}
+th{padding:10px 16px;text-align:left;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:11px 16px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:rgba(77,142,240,.04)}
+.num{font-family:'DM Mono',monospace;font-size:12px;color:var(--text2)}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.b-ok{background:var(--green-dim);color:var(--green);border:1px solid rgba(39,201,126,.2)}
+.b-hs{background:var(--red-dim);color:var(--red);border:1px solid rgba(232,85,58,.2)}
+.b-na{background:var(--surface2);color:var(--text3);border:1px solid var(--border)}
+.zone-pill{padding:2px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.z-piste{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(77,142,240,.2)}
+.z-antenne{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(240,160,32,.2)}
+.z-gse{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(155,114,240,.2)}
+.z-other{background:var(--surface2);color:var(--text3);border:1px solid var(--border)}
+.link-btn{font-size:11px;color:var(--blue);cursor:pointer;background:none;border:none;padding:0;font-family:inherit}
+.link-btn:hover{text-decoration:underline}
+.empty-row{text-align:center;padding:36px;color:var(--text3);font-size:13px}
+.loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px;gap:16px;}
+.spinner{width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:13px;color:var(--text2)}
+.err-card{background:var(--red-dim);border:1px solid rgba(232,85,58,.3);border-radius:var(--radius);padding:16px 20px;font-size:13px;color:#f0a090;line-height:1.8;margin-bottom:16px;}
+.err-card strong{display:block;margin-bottom:6px;font-size:14px}
+.ok-banner{display:flex;align-items:center;gap:10px;background:var(--green-dim);border:1px solid rgba(39,201,126,.2);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:#7ee8b0;margin-bottom:16px;}
+.hist-controls{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap}
+.hist-controls h2{font-size:16px;font-weight:500}
+.engin-sel{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 12px;font-size:13px;color:var(--text);font-family:inherit;outline:none;cursor:pointer;min-width:220px;}
+.engin-sel:focus{border-color:var(--blue)}
+.hist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.hist-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+.hist-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
+.hist-card-name{font-size:14px;font-weight:500}
+.hist-card-meta{font-size:11px;color:var(--text3);margin-top:3px}
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.stat-box{background:var(--surface2);border-radius:var(--radius-sm);padding:10px;text-align:center}
+.stat-val{font-size:20px;font-weight:600}
+.stat-lbl{font-size:10px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.04em}
+.tl{position:relative;padding-left:20px}
+.tl-item{position:relative;padding-bottom:16px}
+.tl-item:last-child{padding-bottom:0}
+.tl-line{position:absolute;left:-11px;top:8px;bottom:-8px;width:1px;background:var(--border)}
+.tl-item:last-child .tl-line{display:none}
+.tl-dot{position:absolute;left:-15px;top:4px;width:9px;height:9px;border-radius:50%;border:1.5px solid}
+.dot-ok{background:var(--green-dim);border-color:var(--green)}
+.dot-hs{background:var(--red-dim);border-color:var(--red)}
+.tl-date{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace}
+.tl-label{font-size:13px;font-weight:500;margin-top:2px}
+.lbl-ok{color:var(--green)}.lbl-hs{color:var(--red)}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.stats-full{grid-column:1/-1}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.stat-card-title{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:16px}
+.donut-wrap{display:flex;align-items:center;justify-content:center;gap:28px}
+.donut-legend{display:flex;flex-direction:column;gap:12px}
+.leg-item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2)}
+.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.leg-val{font-weight:600;color:var(--text);margin-left:auto;padding-left:16px}
+.chart-bars{display:flex;align-items:flex-end;gap:10px;height:150px;padding-top:10px}
+.bar-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1}
+.bar-track{width:100%;background:var(--surface2);border-radius:4px;flex:1;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;}
+.bar-fill{width:100%;border-radius:4px 4px 0 0;transition:height .6s ease;min-height:4px}
+.bar-label{font-size:10px;color:var(--text3);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.bar-val{font-size:12px;font-weight:600;color:var(--text2)}
+.zone-stat-row{display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid var(--border)}
+.zone-stat-row:last-child{border-bottom:none}
+.zone-stat-name{width:150px;flex-shrink:0}
+.zone-stat-bar{flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.zone-stat-fill{height:100%;border-radius:4px;transition:width .6s ease}
+.zone-stat-nums{display:flex;gap:14px;font-size:12px;width:110px;justify-content:flex-end;flex-shrink:0}
+@media(max-width:640px){
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .stats-grid{grid-template-columns:1fr}
+  .logo-sub{display:none}
+  .main{padding:16px}
+  .topbar,.nav{padding-left:16px;padding-right:16px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#7ab4f8" stroke-width="1.5" stroke-linecap="round">
+          <rect x="2" y="5" width="14" height="9" rx="1.5"/>
+          <path d="M6 5V4a1 1 0 011-1h4a1 1 0 011 1v1"/>
+          <path d="M6 9h6M9 7v4"/>
+        </svg>
+      </div>
+      <div>
+        <div class="logo-name">GSE Tracker</div>
+        <div class="logo-sub">Suivi matériel aéroportuaire · RAMP</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="status-pill">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusLabel">Connexion...</span>
+      </div>
+      <span class="sync-time" id="syncTime"></span>
+      <button class="btn primary" id="refreshBtn" onclick="loadData()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M11 6.5A4.5 4.5 0 112 6.5"/><path d="M11 3v3.5H7.5"/></svg>
+        Actualiser
+      </button>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="nav-tab active" id="tab-dashboard" onclick="showTab('dashboard',this)">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="5" height="5" rx="1"/><rect x="7" y="1" width="5" height="5" rx="1"/><rect x="1" y="7" width="5" height="5" rx="1"/><rect x="7" y="7" width="5" height="5" rx="1"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-tab" id="tab-inventaire" onclick="showTab('inventaire',this)">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h9M2 6.5h9M2 10h5"/></svg>
+      Inventaire
+    </button>
+    <button class="nav-tab" id="tab-historique" onclick="showTab('historique',this)">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="5.5"/><path d="M6.5 4v2.5l1.5 1.5"/></svg>
+      Historique
+    </button>
+    <button class="nav-tab" id="tab-statistiques" onclick="showTab('statistiques',this)">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 10V7M5 10V4M8 10V6M11 10V2"/></svg>
+      Statistiques
+    </button>
+  </div>
+
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div class="section active" id="s-dashboard">
+      <div id="dash-loading" class="loading-screen">
+        <div class="spinner"></div>
+        <div class="loading-text">Connexion à Google Sheets...</div>
+      </div>
+      <div id="dash-error" style="display:none"></div>
+      <div id="dash-data" style="display:none">
+        <div class="kpi-row">
+          <div class="kpi" style="--accent:var(--blue)">
+            <div class="kpi-label">Total engins</div>
+            <div class="kpi-val" id="k-total" style="color:var(--blue)">—</div>
+            <div class="kpi-sub">parc complet</div>
+          </div>
+          <div class="kpi" style="--accent:var(--green)">
+            <div class="kpi-label">Opérationnels</div>
+            <div class="kpi-val" id="k-ok" style="color:var(--green)">—</div>
+            <div class="kpi-sub" id="k-ok-pct" style="color:var(--green)">—</div>
+          </div>
+          <div class="kpi" style="--accent:var(--red)">
+            <div class="kpi-label">Hors service</div>
+            <div class="kpi-val" id="k-hs" style="color:var(--red)">—</div>
+            <div class="kpi-sub" id="k-hs-pct" style="color:var(--red)">—</div>
+          </div>
+          <div class="kpi" style="--accent:var(--amber)">
+            <div class="kpi-label">Zones actives</div>
+            <div class="kpi-val" id="k-zones" style="color:var(--amber)">—</div>
+            <div class="kpi-sub" id="k-zones-sub" style="color:var(--text3)">—</div>
+          </div>
+        </div>
+        <div class="ok-banner">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="6"/><path d="M4.5 7l2 2 3-3"/></svg>
+          Connecté à Google Sheets — données en temps réel. Cliquez <strong style="margin:0 4px">Actualiser</strong> après chaque modification.
+        </div>
+        <div class="table-card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Num engin</th><th>Désignation</th><th>Zone</th><th>État</th><th>Observation</th></tr></thead>
+              <tbody id="dash-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INVENTAIRE -->
+    <div class="section" id="s-inventaire">
+      <div class="toolbar">
+        <div class="filter-group">
+          <span class="filter-label">Zone</span>
+          <button class="fbtn active" id="fz-all"   onclick="fZone('all',this)">Tout</button>
+          <button class="fbtn"        id="fz-piste"  onclick="fZone('PISTE',this)">Piste</button>
+          <button class="fbtn"        id="fz-ant"    onclick="fZone('ANTENNE PISTE',this)">Antenne</button>
+          <button class="fbtn"        id="fz-gse"    onclick="fZone('GSE',this)">GSE</button>
+        </div>
+        <div class="filter-group" style="margin-left:12px">
+          <span class="filter-label">État</span>
+          <button class="fbtn active" id="fe-all" onclick="fEtat('all',this)">Tout</button>
+          <button class="fbtn"        id="fe-ok"  onclick="fEtat('OK',this)">OK</button>
+          <button class="fbtn"        id="fe-hs"  onclick="fEtat('HS',this)">HS</button>
+        </div>
+        <div class="search-box">
+          <svg class="search-icon" width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="4"/><path d="M9 9l2.5 2.5"/></svg>
+          <input type="text" id="searchInp" placeholder="Rechercher..." oninput="applyFilters()">
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Num engin</th><th>Désignation</th><th>Zone</th><th>État</th><th>Observation</th><th></th></tr></thead>
+            <tbody id="inv-tbody"><tr><td colspan="6" class="empty-row">Chargement...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORIQUE -->
+    <div class="section" id="s-historique">
+      <div class="hist-controls">
+        <h2>Historique des engins</h2>
+        <select class="engin-sel" id="enginSel" onchange="renderHist()">
+          <option value="all">Tous les engins</option>
+        </select>
+      </div>
+      <div id="hist-content"><div class="loading-screen"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- STATISTIQUES -->
+    <div class="section" id="s-statistiques">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-card-title">État du parc</div>
+          <div class="donut-wrap">
+            <svg width="140" height="140" viewBox="0 0 140 140">
+              <circle cx="70" cy="70" r="54" fill="none" stroke="var(--surface2)" stroke-width="22"/>
+              <circle id="donut-hs-arc" cx="70" cy="70" r="54" fill="none" stroke="var(--red)" stroke-width="22"
+                stroke-dasharray="0 339" stroke-linecap="butt" transform="rotate(-90 70 70)" style="transition:all .8s ease"/>
+              <circle id="donut-ok-arc" cx="70" cy="70" r="54" fill="none" stroke="var(--green)" stroke-width="22"
+                stroke-dasharray="0 339" stroke-linecap="butt" transform="rotate(-90 70 70)" style="transition:all .8s ease"/>
+              <text x="70" y="65" text-anchor="middle" font-size="24" font-weight="600" fill="var(--text)" font-family="DM Sans,sans-serif" id="donut-pct">—</text>
+              <text x="70" y="82" text-anchor="middle" font-size="10" fill="var(--text3)" font-family="DM Sans,sans-serif">opérationnel</text>
+            </svg>
+            <div class="donut-legend">
+              <div class="leg-item"><span class="leg-dot" style="background:var(--green)"></span>Opérationnel <span class="leg-val" id="leg-ok">—</span></div>
+              <div class="leg-item"><span class="leg-dot" style="background:var(--red)"></span>Hors service <span class="leg-val" id="leg-hs">—</span></div>
+              <div class="leg-item"><span class="leg-dot" style="background:var(--text3)"></span>Total <span class="leg-val" id="leg-total">—</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-title">Engins par zone</div>
+          <div class="chart-bars" id="zone-bars">
+            <div class="loading-screen" style="padding:20px;width:100%"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div class="stat-card stats-full">
+          <div class="stat-card-title">Détail OK / HS par zone</div>
+          <div id="zone-detail"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSZvnaH1B9Il4UEd7JCiRi-UE0XZLaJJ4fK2AbA0aN9ZEscl4aO8rck0dMt9Yhol352QI6Gw2SIe6jF/pub?gid=0&single=true&output=csv';
+
+// Proxies CORS pour contourner les blocages sur mobile (file://)
+const CORS_PROXIES = [
+  'https://api.allorigins.win/raw?url=',
+  'https://cors-anywhere.herokuapp.com/',
+  'https://thingproxy.freeboard.io/fetch/'
+];
+
+let allData   = [];
+let histData  = {};
+let activeZone = 'all';
+let activeEtat = 'all';
+
+function zonePill(z) {
+  const v = (z||'').toUpperCase();
+  if(v.includes('ANTENNE')) return `<span class="zone-pill z-antenne">${z}</span>`;
+  if(v==='PISTE')           return `<span class="zone-pill z-piste">${z}</span>`;
+  if(v==='GSE')             return `<span class="zone-pill z-gse">${z}</span>`;
+  return `<span class="zone-pill z-other">${z||'—'}</span>`;
+}
+function etatBadge(e) {
+  const v = (e||'').toUpperCase().trim();
+  if(v==='OK') return '<span class="badge b-ok">OK</span>';
+  if(v==='HS') return '<span class="badge b-hs">HS</span>';
+  return '<span class="badge b-na">—</span>';
+}
+
+// ==================== PARSING CSV ROBUSTE ====================
+function parseCSV(text) {
+  // 1. Enlever le BOM (Byte Order Mark) invisible au début du fichier
+  let clean = text.replace(/^\uFEFF/, '');
+
+  // 2. Détecter le séparateur : virgule OU point-virgule
+  const firstLine = clean.split(/\r?\n/)[0] || '';
+  const sep = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ',';
+
+  // 3. Parser caractère par caractère en gérant les guillemets et les sauts de ligne internes
+  const rows = [];
+  let row = [];
+  let cell = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < clean.length; i++) {
+    const char = clean[i];
+    const next = clean[i + 1];
+
+    if (inQuotes) {
+      if (char === '"') {
+        if (next === '"') {
+          // Guillemet échappé "" → un seul "
+          cell += '"';
+          i++; // sauter le prochain "
+        } else {
+          inQuotes = false; // fin du champ
+        }
+      } else {
+        cell += char; // dans les guillemets, tout est conservé (même \n)
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+      } else if (char === sep) {
+        row.push(cell.trim());
+        cell = '';
+      } else if (char === '\r' && next === '\n') {
+        // Windows \r\n
+        row.push(cell.trim());
+        if (row.some(c => c !== '')) rows.push(row);
+        row = [];
+        cell = '';
+        i++; // sauter le \n
+      } else if (char === '\n' || char === '\r') {
+        // Unix \n ou vieux Mac \r
+        row.push(cell.trim());
+        if (row.some(c => c !== '')) rows.push(row);
+        row = [];
+        cell = '';
+      } else {
+        cell += char;
+      }
+    }
+  }
+
+  // Dernier élément
+  if (cell !== '' || row.length > 0) {
+    row.push(cell.trim());
+    if (row.some(c => c !== '')) rows.push(row);
+  }
+
+  if (rows.length < 2) return [];
+
+  const headers = rows[0].map(h => h.replace(/^"|"$/g, '').trim());
+  const result = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const vals = rows[i];
+    // Compléter avec des chaînes vides si la ligne est plus courte que les headers
+    while (vals.length < headers.length) vals.push('');
+    
+    const obj = {};
+    headers.forEach((h, idx) => {
+      obj[h] = (vals[idx] || '').replace(/^"|"$/g, '').trim();
+    });
+
+    if (Object.values(obj).some(v => v !== '')) {
+      result.push(obj);
+    }
+  }
+
+  return result;
+}
+
+function normalize(raw) {
+  if (!Array.isArray(raw) || raw.length === 0) return [];
+
+  const keys = Object.keys(raw[0]);
+
+  // Helper : trouver la clé réelle en comparant sans accent, sans espace, insensible à la casse
+  const findKey = (candidates) => {
+    for (const c of candidates) {
+      const cNorm = c.toLowerCase()
+                     .normalize('NFD')
+                     .replace(/[\u0300-\u036f]/g, '')
+                     .replace(/[_\s]/g, '');
+      for (const k of keys) {
+        const kNorm = k.toLowerCase()
+                       .normalize('NFD')
+                       .replace(/[\u0300-\u036f]/g, '')
+                       .replace(/[_\s]/g, '');
+        if (kNorm === cNorm) return k;
+      }
+    }
+    return null;
+  };
+
+  const kNum  = findKey(['NumEngin', 'Num Engin', 'numengin', 'numero', 'num', 'id', 'n°engin', 'n_engin', 'code']);
+  const kDes  = findKey(['Designation', 'Designations', 'Désignation', 'designation', 'nom', 'libelle', 'type', 'materiel', 'engin']);
+  const kZone = findKey(['Zone', 'zone', 'Emplacement', 'Lieu', 'Position', 'Site', 'secteur', 'aire']);
+  const kEtat = findKey(['Etat', 'etat', 'Statut', 'status', 'etat_materiel', 'dispo', 'disponibilite', 'condition']);
+  const kObs  = findKey(['Observation', 'Observations', 'observation', 'Note', 'Remarque', 'commentaire', 'details']);
+
+  // DEBUG : à lire dans la console (F12) pour vérifier la détection
+  console.log('🔍 Colonnes détectées :', { NumEngin: kNum, Designation: kDes, Zone: kZone, Etat: kEtat, Observation: kObs });
+  console.log('📄 Première ligne brute :', raw[0]);
+
+  return raw.map((d, i) => {
+    const num  = kNum  ? d[kNum]  : '';
+    const des  = kDes  ? d[kDes]  : '';
+    const zone = kZone ? d[kZone] : '';
+    const etat = kEtat ? d[kEtat] : '';
+    const obs  = kObs  ? d[kObs]  : '';
+
+    const obj = {
+      NumEngin:    (num  || '').toString().trim() || '—',
+      Designation: (des  || '').toString().trim() || '—',
+      Zone:        (zone || '').toString().trim(),
+      Etat:        (etat || '').toString().toUpperCase().trim(),
+      Observation: (obs  || '').toString().trim(),
+    };
+
+    if (i < 3) console.log('✅ Ligne normalisée', i, obj);
+    return obj;
+  }).filter(d => d.NumEngin !== '—' || d.Designation !== '—');
+}
+
+function buildHist() {
+  const today = new Date().toLocaleDateString('fr-FR');
+  histData = {};
+  allData.forEach(d => {
+    if(!histData[d.NumEngin]) histData[d.NumEngin] = [];
+    histData[d.NumEngin].push({ date: today, etat: d.Etat });
+  });
+}
+
+async function loadData() {
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="width:13px;height:13px;border-width:1.5px;flex-shrink:0"></span> Chargement...';
+  setStatus('loading','Connexion...');
+  
+  let text = null;
+  let lastError = null;
+  
+  // 1. Essayer sans proxy d'abord (sur PC/serveur local)
+  try {
+    console.log('📡 Tentative 1 : Sans proxy (PC/serveur local)');
+    const res = await fetch(CSV_URL + '&nocache=' + Date.now(), { method: 'GET' });
+    if(res.ok) {
+      text = await res.text();
+      console.log('✅ Succès sans proxy');
+    }
+  } catch(e) {
+    lastError = e;
+    console.log('⚠️ Pas de proxy nécessaire, essai des proxies CORS pour mobile...');
+  }
+  
+  // 2. Si échec, essayer avec proxies CORS (pour mobile)
+  if(!text) {
+    for (let i = 0; i < CORS_PROXIES.length; i++) {
+      try {
+        console.log(`📡 Tentative ${i+2} : Proxy CORS - ${CORS_PROXIES[i]}`);
+        const corsUrl = CORS_PROXIES[i] + encodeURIComponent(CSV_URL);
+        const res = await fetch(corsUrl + '&nocache=' + Date.now(), {
+          method: 'GET',
+          headers: { 'x-requested-with': 'XMLHttpRequest' }
+        });
+        if(res.ok) {
+          text = await res.text();
+          console.log(`✅ Succès avec proxy ${i+1}`);
+          break;
+        }
+      } catch(e) {
+        lastError = e;
+        console.log(`❌ Proxy ${i+1} échoué: ${e.message}`);
+      }
+    }
+  }
+  
+  // 3. Traitement du résultat
+  try {
+    if(!text) throw new Error(lastError?.message || 'Impossible de charger les données');
+    
+    allData = normalize(parseCSV(text));
+    buildHist();
+    renderDash();
+    applyFilters();
+    populateSel();
+    renderHist();
+    renderStats();
+    setStatus('ok','Google Sheets ✅');
+    document.getElementById('syncTime').textContent = 'Synchro : ' + new Date().toLocaleTimeString('fr-FR');
+    document.getElementById('dash-loading').style.display = 'none';
+    document.getElementById('dash-data').style.display   = 'block';
+    document.getElementById('dash-error').style.display  = 'none';
+  } catch(err) {
+    setStatus('err','Erreur connexion');
+    document.getElementById('dash-loading').style.display = 'none';
+    document.getElementById('dash-error').style.display   = 'block';
+    document.getElementById('dash-error').innerHTML = `
+      <div class="err-card">
+        <strong>❌ Impossible de charger les données</strong>
+        Erreur : ${err.message}<br><br>
+        <strong>Solutions :</strong><br>
+        1️⃣ Vérifiez que le mobile a internet (WiFi ou données)<br>
+        2️⃣ Essayez de rafraîchir (bouton Actualiser)<br>
+        3️⃣ Sur PC: lancez le serveur local (Serveur_Local.bat)<br>
+        4️⃣ Depuis le même WiFi, accédez: http://192.168.X.X:8000<br>
+      </div>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M11 6.5A4.5 4.5 0 112 6.5"/><path d="M11 3v3.5H7.5"/></svg> Actualiser';
+  }
+}
+
+function setStatus(state, label) {
+  document.getElementById('statusDot').className = 'status-dot'+(state==='ok'?' ok':state==='err'?' err':'');
+  document.getElementById('statusLabel').textContent = label;
+}
+
+function renderDash() {
+  const total = allData.length;
+  const ok    = allData.filter(d=>d.Etat==='OK').length;
+  const hs    = allData.filter(d=>d.Etat==='HS').length;
+  const zones = [...new Set(allData.map(d=>d.Zone).filter(z=>z&&z!=='-'))];
+  document.getElementById('k-total').textContent     = total;
+  document.getElementById('k-ok').textContent        = ok;
+  document.getElementById('k-ok-pct').textContent    = total?Math.round(ok/total*100)+'% du parc':'—';
+  document.getElementById('k-hs').textContent        = hs;
+  document.getElementById('k-hs-pct').textContent    = total?Math.round(hs/total*100)+'% du parc':'—';
+  document.getElementById('k-zones').textContent     = zones.length||'—';
+  document.getElementById('k-zones-sub').textContent = zones.join(' · ')||'—';
+  const sorted = [...allData.filter(d=>d.Etat==='HS'),...allData.filter(d=>d.Etat==='OK'),...allData.filter(d=>d.Etat!=='OK'&&d.Etat!=='HS')];
+  document.getElementById('dash-tbody').innerHTML = sorted.length
+    ? sorted.map(d=>`<tr>
+        <td class="num">${d.NumEngin}</td>
+        <td style="font-weight:500">${d.Designation}</td>
+        <td>${zonePill(d.Zone)}</td>
+        <td>${etatBadge(d.Etat)}</td>
+        <td style="color:var(--text2);font-size:12px">${d.Observation||'—'}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="5" class="empty-row">Aucune donnée</td></tr>`;
+}
+
+function applyFilters() {
+  const q = (document.getElementById('searchInp').value||'').toLowerCase();
+  const filtered = allData.filter(d => {
+    const zOk = activeZone==='all'||(d.Zone||'').toUpperCase()===activeZone;
+    const eOk = activeEtat==='all'||d.Etat===activeEtat;
+    const sOk = !q||d.Designation.toLowerCase().includes(q)||d.NumEngin.toLowerCase().includes(q)||(d.Zone||'').toLowerCase().includes(q);
+    return zOk&&eOk&&sOk;
+  });
+  document.getElementById('inv-tbody').innerHTML = filtered.length
+    ? filtered.map(d=>`<tr>
+        <td class="num">${d.NumEngin}</td>
+        <td style="font-weight:500">${d.Designation}</td>
+        <td>${zonePill(d.Zone)}</td>
+        <td>${etatBadge(d.Etat)}</td>
+        <td style="color:var(--text2);font-size:12px">${d.Observation||'—'}</td>
+        <td><button class="link-btn" onclick="goHist('${d.NumEngin}')">Historique →</button></td>
+      </tr>`).join('')
+    : `<tr><td colspan="6" class="empty-row">Aucun engin trouvé</td></tr>`;
+}
+
+/* ── Boutons filtre — chacun a son ID unique ── */
+function fZone(z, btn) {
+  activeZone = z;
+  ['fz-all','fz-piste','fz-ant','fz-gse'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.remove('active');
+  });
+  btn.classList.add('active');
+  applyFilters();
+}
+function fEtat(e, btn) {
+  activeEtat = e;
+  ['fe-all','fe-ok','fe-hs'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.remove('active');
+  });
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function populateSel() {
+  const sel = document.getElementById('enginSel');
+  sel.innerHTML = '<option value="all">Tous les engins</option>';
+  allData.forEach(d => {
+    const o = document.createElement('option');
+    o.value = d.NumEngin;
+    o.textContent = `${d.NumEngin} — ${d.Designation}`;
+    sel.appendChild(o);
+  });
+}
+
+function renderHist() {
+  const sel = document.getElementById('enginSel').value;
+  const engins = sel==='all'?allData:allData.filter(d=>d.NumEngin===sel);
+  const container = document.getElementById('hist-content');
+  if(!engins.length){container.innerHTML='<div class="empty-row">Aucun engin.</div>';return;}
+  container.innerHTML = '<div class="hist-grid">'+engins.map(d=>{
+    const hist = histData[d.NumEngin]||[];
+    const okC  = hist.filter(h=>h.etat==='OK').length;
+    const hsC  = hist.filter(h=>h.etat==='HS').length;
+    return `<div class="hist-card">
+      <div class="hist-card-header">
+        <div>
+          <div class="hist-card-name">${d.Designation}</div>
+          <div class="hist-card-meta">${d.NumEngin} · ${d.Zone||'—'}</div>
+        </div>
+        ${etatBadge(d.Etat)}
+      </div>
+      <div class="stat-row">
+        <div class="stat-box"><div class="stat-val" style="color:var(--blue)">${hist.length}</div><div class="stat-lbl">Évènements</div></div>
+        <div class="stat-box"><div class="stat-val" style="color:var(--green)">${okC}</div><div class="stat-lbl">Retours OK</div></div>
+        <div class="stat-box"><div class="stat-val" style="color:var(--red)">${hsC}</div><div class="stat-lbl">Pannes HS</div></div>
+      </div>
+      <div class="tl">
+        ${hist.map(h=>`
+          <div class="tl-item">
+            <div class="tl-line"></div>
+            <div class="tl-dot ${h.etat==='OK'?'dot-ok':'dot-hs'}"></div>
+            <div class="tl-date">${h.date}</div>
+            <div class="tl-label ${h.etat==='OK'?'lbl-ok':'lbl-hs'}">${h.etat==='OK'?'✅ Retour opérationnel':'🔴 Hors service'}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('')+'</div>';
+}
+
+function goHist(num) {
+  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-historique').classList.add('active');
+  showTab('historique',null);
+  document.getElementById('enginSel').value = num;
+  renderHist();
+}
+
+function renderStats() {
+  const total = allData.length;
+  if(!total) return;
+  const ok  = allData.filter(d=>d.Etat==='OK').length;
+  const hs  = allData.filter(d=>d.Etat==='HS').length;
+  const pct = Math.round(ok/total*100);
+  const circ = 339;
+  const okArc = circ*(ok/total);
+  const hsArc = circ*(hs/total);
+
+  /* Donut — OK en premier, HS décalé */
+  const okEl = document.getElementById('donut-ok-arc');
+  const hsEl = document.getElementById('donut-hs-arc');
+  okEl.setAttribute('stroke-dasharray', `${okArc} ${circ}`);
+  okEl.setAttribute('transform','rotate(-90 70 70)');
+  hsEl.setAttribute('stroke-dasharray', `${hsArc} ${circ}`);
+  hsEl.setAttribute('transform',`rotate(${-90+ok/total*360} 70 70)`);
+
+  document.getElementById('donut-pct').textContent  = pct+'%';
+  document.getElementById('leg-ok').textContent     = ok;
+  document.getElementById('leg-hs').textContent     = hs;
+  document.getElementById('leg-total').textContent  = total;
+
+  /* Barres par zone */
+  const zones   = [...new Set(allData.map(d=>d.Zone).filter(z=>z&&z!=='-'))];
+  const zColors = {'PISTE':'var(--blue)','ANTENNE PISTE':'var(--amber)','GSE':'var(--purple)'};
+  const maxZ    = Math.max(...zones.map(z=>allData.filter(d=>d.Zone===z).length),1);
+  document.getElementById('zone-bars').innerHTML = zones.map(z=>{
+    const cnt = allData.filter(d=>d.Zone===z).length;
+    const h   = Math.max(Math.round(cnt/maxZ*100),5);
+    const col = zColors[z]||'var(--blue)';
+    const lbl = z==='ANTENNE PISTE'?'Antenne':z;
+    return `<div class="bar-wrap">
+      <div class="bar-val">${cnt}</div>
+      <div class="bar-track"><div class="bar-fill" style="height:${h}%;background:${col}"></div></div>
+      <div class="bar-label">${lbl}</div>
+    </div>`;
+  }).join('');
+
+  /* Détail OK/HS par zone */
+  document.getElementById('zone-detail').innerHTML = zones.map(z=>{
+    const zData = allData.filter(d=>d.Zone===z);
+    const zOk   = zData.filter(d=>d.Etat==='OK').length;
+    const zHs   = zData.filter(d=>d.Etat==='HS').length;
+    const zTot  = zData.length;
+    const pctOk = zTot?Math.round(zOk/zTot*100):0;
+    const col   = zColors[z]||'var(--blue)';
+    return `<div class="zone-stat-row">
+      <div class="zone-stat-name">${zonePill(z)}</div>
+      <div class="zone-stat-bar"><div class="zone-stat-fill" style="width:${pctOk}%;background:${col}"></div></div>
+      <div class="zone-stat-nums">
+        <span style="color:var(--green);font-weight:500">${zOk} OK</span>
+        <span style="color:var(--red);font-weight:500">${zHs} HS</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function showTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('s-'+id).classList.add('active');
+  if(btn){document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+  if(id==='inventaire')   applyFilters();
+  if(id==='historique')   renderHist();
+  if(id==='statistiques') renderStats();
+}
+
+loadData();
+setInterval(loadData, 5*60*1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GSE Tracker — Partage QR</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: linear-gradient(135deg, #0b0e18 0%, #1a1f2e 100%);
+  color: #dde3f5;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.container {
+  background: #111622;
+  border: 1px solid #222d47;
+  border-radius: 16px;
+  padding: 40px;
+  max-width: 500px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+h1 {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.subtitle {
+  color: #7a88aa;
+  font-size: 14px;
+  margin-bottom: 30px;
+}
+#qrcode {
+  display: flex;
+  justify-content: center;
+  margin: 30px 0;
+}
+#qrcode canvas {
+  border: 2px solid #4d8ef0;
+  border-radius: 12px;
+  padding: 10px;
+  background: white;
+}
+.link-section {
+  margin-top: 30px;
+  padding-top: 30px;
+  border-top: 1px solid #222d47;
+}
+.link-label {
+  color: #3d4d6a;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+.link-box {
+  background: #171d2e;
+  border: 1px solid #2a3857;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 15px;
+  word-break: break-all;
+  font-size: 12px;
+  color: #4d8ef0;
+  font-family: 'DM Mono', monospace;
+  line-height: 1.6;
+}
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 7px;
+  border: 1px solid #2a3857;
+  background: #4d8ef0;
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  margin-bottom: 15px;
+}
+.copy-btn:hover {
+  background: #6db3f7;
+  transform: translateY(-1px);
+}
+.instructions {
+  background: #0a2e1c;
+  border: 1px solid rgba(39, 201, 126, 0.2);
+  border-radius: 8px;
+  padding: 15px;
+  margin-top: 20px;
+  text-align: left;
+  font-size: 12px;
+  color: #7ee8b0;
+  line-height: 1.8;
+}
+.instructions h3 {
+  margin-bottom: 8px;
+  color: #27c97e;
+  font-size: 13px;
+}
+.instructions li {
+  margin-left: 20px;
+  margin-bottom: 6px;
+}
+.file-info {
+  background: #1d2540;
+  border: 1px solid #2a3857;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 15px;
+  font-size: 12px;
+  color: #7a88aa;
+}
+.file-info strong {
+  color: #dde3f5;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📱 GSE Tracker</h1>
+  <div class="subtitle">Scannez le code QR pour accéder à l'application</div>
+  
+  <div id="qrcode"></div>
+  
+  <button class="copy-btn" onclick="downloadFile()">
+    <span>⬇️</span> Télécharger le fichier
+  </button>
+  
+  <div class="link-section">
+    <div class="link-label">Lien de partage (copier-coller)</div>
+    <div class="link-box" id="shareLink">file:///c:/Users/hp/Desktop/trackertest/files/GSE_Tracker.html</div>
+    <button class="copy-btn" onclick="copyToClipboard()">📋 Copier le lien</button>
+  </div>
+  
+  <div class="instructions">
+    <h3>✅ Modes d'accès :</h3>
+    <ul>
+      <li><strong>PC local :</strong> Ouvrir le fichier GSE_Tracker.html directement</li>
+      <li><strong>Mobile :</strong> Envoyer le fichier par email/Telegram et l'ouvrir</li>
+      <li><strong>Partage :</strong> Copier le lien ou scanner le QR code</li>
+    </ul>
+  </div>
+  
+  <div class="file-info">
+    <strong>📄 Fichier :</strong> GSE_Tracker.html<br>
+    <strong>📊 Fonction :</strong> Suivi matériel RAMP<br>
+    <strong>🌐 Compatible :</strong> Chrome, Firefox, Edge, Safari
+  </div>
+</div>
+
+<script>
+// Générer le QR code
+const filename = 'GSE_Tracker.html';
+const filepath = 'c:/Users/hp/Desktop/trackertest/files/GSE_Tracker.html';
+
+// QR code contenant le chemin du fichier
+new QRCode(document.getElementById('qrcode'), {
+  text: filepath,
+  width: 250,
+  height: 250,
+  colorDark: "#0b0e18",
+  colorLight: "#ffffff",
+  correctLevel: QRCode.CorrectLevel.H
+});
+
+// Copier le lien
+function copyToClipboard() {
+  const link = document.getElementById('shareLink').textContent;
+  navigator.clipboard.writeText(link).then(() => {
+    const btn = event.target;
+    const original = btn.innerHTML;
+    btn.innerHTML = '✅ Copié !';
+    setTimeout(() => { btn.innerHTML = original; }, 2000);
+  });
+}
+
+// Télécharger le fichier
+function downloadFile() {
+  // Créer un lien de téléchargement
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', '../GSE_Tracker.html', true);
+  xhr.responseType = 'blob';
+  xhr.onload = function() {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(xhr.response);
+    a.download = 'GSE_Tracker.html';
+    a.click();
+  };
+  xhr.onerror = () => {
+    alert('Erreur : impossible de télécharger. Localisez GSE_Tracker.html manuellement.');
+  };
+  xhr.send();
+}
+</script>
+</body>
+</html>
